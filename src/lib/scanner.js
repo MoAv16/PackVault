@@ -124,11 +124,76 @@ class Scanner {
     }
   }
 
+  async scanScoop() {
+    const isAvailable = await this.checkCommand('scoop');
+    if (!isAvailable) return { manager: 'scoop', available: false, packages: [] };
+
+    try {
+      // scoop export returns a list of installed apps
+      const { stdout } = await execAsync('scoop list');
+      const lines = stdout.split('\n');
+      const packages = [];
+      let startParsing = false;
+
+      for (let line of lines) {
+        if (line.startsWith('Installed apps')) {
+          startParsing = true;
+          continue;
+        }
+        if (!startParsing || line.trim().length === 0 || line.startsWith('---')) continue;
+
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          packages.push({
+            name: parts[0],
+            version: parts[1],
+            manager: 'scoop'
+          });
+        }
+      }
+      
+      return { manager: 'scoop', available: true, packages };
+    } catch (error) {
+      console.error('Error scanning scoop:', error);
+      return { manager: 'scoop', available: true, packages: [], error: error.message };
+    }
+  }
+
+  async scanChoco() {
+    const isAvailable = await this.checkCommand('choco');
+    if (!isAvailable) return { manager: 'choco', available: false, packages: [] };
+
+    try {
+      const { stdout } = await execAsync('choco list --local-only --limit-output');
+      const lines = stdout.split('\n');
+      const packages = [];
+
+      for (let line of lines) {
+        if (line.trim().length === 0) continue;
+        const parts = line.trim().split('|');
+        if (parts.length >= 2) {
+          packages.push({
+            name: parts[0],
+            version: parts[1],
+            manager: 'choco'
+          });
+        }
+      }
+      
+      return { manager: 'choco', available: true, packages };
+    } catch (error) {
+      console.error('Error scanning choco:', error);
+      return { manager: 'choco', available: true, packages: [], error: error.message };
+    }
+  }
+
   async scanAll() {
     const results = await Promise.all([
       this.scanNpm(),
       this.scanPip(),
-      this.scanWinget()
+      this.scanWinget(),
+      this.scanScoop(),
+      this.scanChoco()
     ]);
     return results;
   }
