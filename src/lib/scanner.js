@@ -39,7 +39,17 @@ class Scanner {
     if (mgr === 'npm' || mgr === 'pip') return 'packages';
 
     if (mgr === 'scoop' || mgr === 'choco' || mgr === 'winget') {
-        const desktopKeywords = ['browser', 'client', 'desktop', 'player', 'office', 'studio', 'workstation', 'chrome', 'firefox', 'discord', 'spotify'];
+        const desktopKeywords = [
+          'browser', 'client', 'desktop', 'player', 'office', 'studio', 'workstation', 
+          'chrome', 'firefox', 'discord', 'spotify', 'code', 'visual', 'adobe', 
+          'reader', 'editor', 'viewer', 'player', 'manager', 'app', 'tool'
+        ];
+        
+        // If it's Winget or Choco, it's very often a GUI app unless it's explicitly a tool
+        if ((mgr === 'winget' || mgr === 'choco') && !name.includes('cli') && !name.includes('sdk')) {
+          return 'desktop';
+        }
+
         if (desktopKeywords.some(k => name.includes(k))) return 'desktop';
         return 'tools';
     }
