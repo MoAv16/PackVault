@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let filtered = currentPackages;
     
     if (currentFilter !== 'all') {
-      filtered = currentPackages.filter(p => p.manager === currentFilter);
+      filtered = currentPackages.filter(p => p.category === currentFilter);
     }
     
     const term = searchInput.value.toLowerCase();
