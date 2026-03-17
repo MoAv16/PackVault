@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const scanner = require('./src/lib/scanner.js');
 const cache = require('./src/lib/cache.js');
+const updater = require('./src/lib/updater.js');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -29,6 +30,10 @@ app.whenReady().then(() => {
     });
     
     return results;
+  });
+
+  ipcMain.handle('system:update-package', async (event, { manager, name }) => {
+    return await updater.updatePackage(manager, name);
   });
 
   createWindow();
