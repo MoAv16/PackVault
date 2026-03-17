@@ -17,6 +17,25 @@ class Scanner {
   }
 
   /**
+   * Run a command with a timeout to prevent hanging.
+   */
+  async execWithTimeout(command, timeout = 30000) {
+    let timeoutHandle;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(new Error(`Command timed out: ${command}`)), timeout);
+    });
+    
+    try {
+      const result = await Promise.race([execAsync(command), timeoutPromise]);
+      clearTimeout(timeoutHandle);
+      return result;
+    } catch (e) {
+      clearTimeout(timeoutHandle);
+      throw e;
+    }
+  }
+
+  /**
    * Assigns a logical category to a package based on its name and manager.
    */
   categorize(pkg) {
@@ -45,7 +64,6 @@ class Scanner {
           'reader', 'editor', 'viewer', 'player', 'manager', 'app', 'tool'
         ];
         
-        // If it's Winget or Choco, it's very often a GUI app unless it's explicitly a tool
         if ((mgr === 'winget' || mgr === 'choco') && !name.includes('cli') && !name.includes('sdk')) {
           return 'desktop';
         }
@@ -58,15 +76,41 @@ class Scanner {
   }
 
   /**
+   * Deduplicates packages across different managers.
+   */
+  deduplicate(allResults) {
+    const registry = new Map();
+    const priority = ['winget', 'scoop', 'choco', 'npm', 'pip', 'system'];
+    
+    const flattened = allResults
+      .filter(r => r && r.packages)
+      .flatMap(r => r.packages);
+    
+    // Sort by priority so we keep the most reliable source
+    flattened.sort((a, b) => priority.indexOf(a.manager) - priority.indexOf(b.manager));
+    
+    const finalPackages = [];
+    for (const pkg of flattened) {
+      // Normalize name for comparison (remove spaces and special chars)
+      const normalName = pkg.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!registry.has(normalName)) {
+        registry.set(normalName, true);
+        finalPackages.push(pkg);
+      }
+    }
+    return finalPackages;
+  }
+
+  /**
    * Runs a security audit for supported managers.
    */
   async runAudit(manager) {
     try {
       if (manager === 'npm') {
-        const { stdout } = await execAsync('npm audit -g --json');
+        const { stdout } = await this.execWithTimeout('npm audit -g --json');
         return JSON.parse(stdout);
       } else if (manager === 'pip') {
-        const { stdout, stderr } = await execAsync('pip check');
+        const { stdout, stderr } = await this.execWithTimeout('pip check');
         return { output: stdout || stderr };
       }
       return { message: 'No security audit available for this manager.' };
@@ -86,21 +130,23 @@ class Scanner {
     if (!isAvailable) return { manager: 'npm', available: false, packages: [] };
 
     try {
-      const { stdout } = await execAsync('npm list -g --json --depth=0');
+      const { stdout } = await this.execWithTimeout('npm list -g --json --depth=0');
       const data = JSON.parse(stdout);
       
       const packages = [];
-      if (data.dependencies) {
-        for (const [name, info] of Object.entries(data.dependencies)) {
-          const pkg = {
-            name,
-            version: info.version || 'unknown',
-            latest: info.version || 'unknown',
-            manager: 'npm'
-          };
-          pkg.category = this.categorize(pkg);
-          packages.push(pkg);
-        }
+      // Handle nested structures or flat dependencies
+      const deps = data.dependencies || data.devDependencies || (data.name ? { [data.name]: data } : {});
+      
+      for (const [name, info] of Object.entries(deps)) {
+        if (!name || name === 'npm') continue;
+        const pkg = {
+          name,
+          version: info.version || 'unknown',
+          latest: info.version || 'unknown',
+          manager: 'npm'
+        };
+        pkg.category = this.categorize(pkg);
+        packages.push(pkg);
       }
       
       return { manager: 'npm', available: true, packages };
@@ -115,7 +161,7 @@ class Scanner {
     if (!isAvailable) return { manager: 'pip', available: false, packages: [] };
 
     try {
-      const { stdout } = await execAsync('pip list --format=json');
+      const { stdout } = await this.execWithTimeout('pip list --format=json');
       const data = JSON.parse(stdout);
       
       const packages = data.map(p => {
@@ -141,8 +187,7 @@ class Scanner {
     if (!isAvailable) return { manager: 'winget', available: false, packages: [] };
 
     try {
-      const { stdout } = await execAsync('chcp 65001 >nul & winget list');
-      
+      const { stdout } = await this.execWithTimeout('chcp 65001 >nul & winget list');
       const lines = stdout.split(/\r?\n/);
       const packages = [];
       let startParsing = false;
@@ -161,9 +206,7 @@ class Scanner {
               line.toUpperCase().indexOf('ID'), 
               line.toLowerCase().indexOf('version'), 
               line.toLowerCase().includes('available') ? line.toLowerCase().indexOf('available') : 
-              (line.toLowerCase().includes('verfügbar') ? line.toLowerCase().indexOf('verfügbar') : 
-              (line.toLowerCase().includes('source') ? line.toLowerCase().indexOf('source') : 
-              (line.toLowerCase().includes('quelle') ? line.toLowerCase().indexOf('quelle') : line.length)))
+              (line.toLowerCase().includes('verfügbar') ? line.toLowerCase().indexOf('verfügbar') : line.length)
             ];
           }
           continue;
@@ -174,13 +217,14 @@ class Scanner {
         if (colIndices.length >= 3) {
           const name = line.substring(colIndices[0], colIndices[1]).trim();
           const current = line.substring(colIndices[2], colIndices[3]).trim();
-          const available = line.substring(colIndices[3]).trim().split(/\s+/)[0]; // Only take the first word (version)
+          const availableStr = line.substring(colIndices[3]).trim();
+          const available = availableStr.split(/\s+/)[0]; 
           
           if (name) {
             const pkg = {
               name,
               version: current,
-              latest: available || current,
+              latest: (available && available !== '<--') ? available : current,
               manager: 'winget'
             };
             pkg.category = this.categorize(pkg);
@@ -201,8 +245,8 @@ class Scanner {
     if (!isAvailable) return { manager: 'scoop', available: false, packages: [] };
 
     try {
-      const { stdout } = await execAsync('scoop list');
-      const lines = stdout.split('\n');
+      const { stdout } = await this.execWithTimeout('scoop list');
+      const lines = stdout.split(/\r?\n/);
       const packages = [];
       let startParsing = false;
 
@@ -238,8 +282,8 @@ class Scanner {
     if (!isAvailable) return { manager: 'choco', available: false, packages: [] };
 
     try {
-      const { stdout } = await execAsync('choco list --local-only --limit-output');
-      const lines = stdout.split('\n');
+      const { stdout } = await this.execWithTimeout('choco list --local-only --limit-output');
+      const lines = stdout.split(/\r?\n/);
       const packages = [];
 
       for (let line of lines) {
@@ -282,7 +326,7 @@ class Scanner {
     `.replace(/\n/g, '').trim();
 
     try {
-      const { stdout } = await execAsync(`powershell -NoProfile -Command "${psScript.replace(/"/g, '\\"')}"`);
+      const { stdout } = await this.execWithTimeout(`powershell -NoProfile -Command "${psScript.replace(/"/g, '\\"')}"`);
       if (!stdout || stdout.trim() === "") return { manager: 'system', available: true, packages: [] };
       
       const rawData = JSON.parse(stdout);
@@ -301,25 +345,48 @@ class Scanner {
           return pkg;
         });
       
-      const uniquePackages = Array.from(new Map(packages.map(item => [item.name, item])).values());
-      
-      return { manager: 'system', available: true, packages: uniquePackages };
+      return { manager: 'system', available: true, packages };
     } catch (error) {
       console.error('Error scanning system programs:', error);
       return { manager: 'system', available: true, packages: [], error: error.message };
     }
   }
 
-  async scanAll() {
-    const results = await Promise.all([
-      this.scanNpm(),
-      this.scanPip(),
-      this.scanWinget(),
-      this.scanScoop(),
-      this.scanChoco(),
-      this.scanSystemPrograms()
-    ]);
-    return results;
+  async scanAll(target = 'all') {
+    let promises = [];
+    if (target === 'all') {
+      promises = [
+        this.scanNpm(), this.scanPip(), this.scanWinget(), 
+        this.scanScoop(), this.scanChoco(), this.scanSystemPrograms()
+      ];
+    } else {
+      switch (target) {
+        case 'npm': promises = [this.scanNpm()]; break;
+        case 'pip': promises = [this.scanPip()]; break;
+        case 'winget': promises = [this.scanWinget()]; break;
+        case 'scoop': promises = [this.scanScoop()]; break;
+        case 'choco': promises = [this.scanChoco()]; break;
+        case 'system': promises = [this.scanSystemPrograms()]; break;
+        case 'desktop': promises = [this.scanSystemPrograms(), this.scanWinget()]; break;
+        default: promises = [this.scanNpm(), this.scanPip(), this.scanWinget(), this.scanScoop(), this.scanChoco(), this.scanSystemPrograms()];
+      }
+    }
+
+    const settledResults = await Promise.allSettled(promises);
+    const successfulResults = settledResults
+      .filter(r => r.status === 'fulfilled')
+      .map(r => r.value);
+    
+    // Deduplicate and return consolidated list
+    const deduplicatedPackages = this.deduplicate(successfulResults);
+    
+    // We return a results-like object so the main process can still cache by manager
+    // But for the renderer, it will receive the deduplicated list through this structure
+    return [{
+      manager: 'consolidated',
+      available: true,
+      packages: deduplicatedPackages
+    }];
   }
 }
 
