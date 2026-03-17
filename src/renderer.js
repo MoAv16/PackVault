@@ -21,6 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load Version Info
   appVersionText.textContent = `Electron: ${window.electronAPI.getAppVersion()}`;
 
+  // Initialize Theme on Startup
+  async function initTheme() {
+    const isDark = await window.electronAPI.getThemeStatus();
+    updateThemeUI(isDark);
+  }
+  initTheme();
+
   btnThemeToggle.addEventListener('click', async () => {
     const isDarkMode = await window.electronAPI.toggleTheme();
     updateThemeUI(isDarkMode);

@@ -35,6 +35,10 @@ app.whenReady().then(() => {
     nativeTheme.themeSource = 'system'
   });
 
+  ipcMain.handle('dark-mode:get-status', () => {
+    return nativeTheme.shouldUseDarkColors;
+  });
+
   ipcMain.handle('system:scan-all', async (event, target = 'all') => {
     let results = [];
     
