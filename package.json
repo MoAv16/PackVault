@@ -1,0 +1,20 @@
+{
+  "name": "packvault",
+  "version": "0.1.0",
+  "description": "Local System Package Manager & Inspector",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "package-manager",
+    "electron",
+    "system-inspector"
+  ],
+  "author": "PackVault Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}
