@@ -23,6 +23,14 @@ class Scanner {
     const name = pkg.name.toLowerCase();
     const mgr = pkg.manager;
 
+    // Smart Exclusion (Drivers, Core, Redists)
+    const coreKeywords = ['intel', 'nvidia', 'amd ', 'realtek', 'microsoft visual c++', 'update health tools', 'windows desktop runtime', 'edge webview'];
+    if (coreKeywords.some(k => name.includes(k))) return 'system_core';
+
+    // Enterprise / Company Portal
+    const enterpriseKeywords = ['cisco', 'citrix', 'vmware', 'fortinet', 'vpn', 'endpoint', 'globalprotect'];
+    if (enterpriseKeywords.some(k => name.includes(k)) && mgr === 'system') return 'enterprise';
+
     const runtimeKeywords = ['python', 'node.js', 'nodejs', 'java', 'openjdk', 'dotnet', 'rust', 'go-lang', 'ruby', 'perl', 'php'];
     if (runtimeKeywords.some(k => name.includes(k))) return 'runtimes';
 
@@ -37,6 +45,27 @@ class Scanner {
     }
 
     return 'tools';
+  }
+
+  /**
+   * Runs a security audit for supported managers.
+   */
+  async runAudit(manager) {
+    try {
+      if (manager === 'npm') {
+        const { stdout } = await execAsync('npm audit -g --json');
+        return JSON.parse(stdout);
+      } else if (manager === 'pip') {
+        const { stdout, stderr } = await execAsync('pip check');
+        return { output: stdout || stderr };
+      }
+      return { message: 'No security audit available for this manager.' };
+    } catch (error) {
+      if (manager === 'npm' && error.stdout) {
+         try { return JSON.parse(error.stdout); } catch(e) { return { error: 'Parse failed', raw: error.stdout }; }
+      }
+      return { error: error.message };
+    }
   }
 
   /**
