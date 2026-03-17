@@ -1,5 +1,6 @@
 {
   "name": "packvault",
+  "productName": "PackVault",
   "version": "0.1.0",
   "description": "Local System Package Manager & Inspector",
   "main": "main.js",
