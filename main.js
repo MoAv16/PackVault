@@ -1,5 +1,6 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const scanner = require('./src/lib/scanner.js');
 const cache = require('./src/lib/cache.js');
 const updater = require('./src/lib/updater.js');
@@ -34,6 +35,59 @@ app.whenReady().then(() => {
 
   ipcMain.handle('system:update-package', async (event, { manager, name }) => {
     return await updater.updatePackage(manager, name);
+  });
+
+  ipcMain.handle('system:get-cache', () => {
+    const managers = ['npm', 'winget', 'pip'];
+    let allPackages = [];
+    
+    managers.forEach(mgr => {
+      const data = cache.load(mgr);
+      if (data && data.packages) {
+        allPackages = allPackages.concat(data.packages);
+      }
+    });
+    return allPackages;
+  });
+
+  ipcMain.handle('system:export-data', async (event, packages) => {
+    const { canceled, filePath } = await dialog.showSaveDialog({
+      title: 'Export Migration Script',
+      defaultPath: 'packvault-restore.bat',
+      filters: [{ name: 'Batch Script', extensions: ['bat'] }, { name: 'Shell Script', extensions: ['sh'] }]
+    });
+
+    if (canceled || !filePath) return { success: false, canceled: true };
+
+    let scriptContent = '';
+    const isWindows = filePath.endsWith('.bat');
+
+    if (isWindows) {
+      scriptContent += '@echo off\n';
+      scriptContent += 'echo Restoring PackVault Packages...\n\n';
+    } else {
+      scriptContent += '#!/bin/bash\n';
+      scriptContent += 'echo "Restoring PackVault Packages..."\n\n';
+    }
+
+    packages.forEach(p => {
+      if (p.manager === 'npm') {
+        scriptContent += `npm install -g ${p.name}\n`;
+      } else if (p.manager === 'winget') {
+        scriptContent += `winget install --id ${p.name} --exact --accept-package-agreements\n`;
+      } else if (p.manager === 'pip') {
+        scriptContent += `pip install ${p.name}\n`;
+      }
+    });
+
+    scriptContent += '\necho "Restore complete!"\n';
+
+    try {
+      fs.writeFileSync(filePath, scriptContent);
+      return { success: true, filePath };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
   });
 
   createWindow();
