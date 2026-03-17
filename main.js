@@ -38,7 +38,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('system:get-cache', () => {
-    const managers = ['npm', 'winget', 'pip', 'scoop', 'choco'];
+    const managers = ['npm', 'winget', 'pip', 'scoop', 'choco', 'system'];
     let allPackages = [];
     
     managers.forEach(mgr => {
