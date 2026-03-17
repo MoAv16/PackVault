@@ -56,6 +56,7 @@ class Scanner {
           const pkg = {
             name,
             version: info.version || 'unknown',
+            latest: info.version || 'unknown',
             manager: 'npm'
           };
           pkg.category = this.categorize(pkg);
@@ -82,6 +83,7 @@ class Scanner {
         const pkg = {
           name: p.name,
           version: p.version,
+          latest: p.version,
           manager: 'pip'
         };
         pkg.category = this.categorize(pkg);
@@ -132,12 +134,14 @@ class Scanner {
         
         if (colIndices.length >= 3) {
           const name = line.substring(colIndices[0], colIndices[1]).trim();
-          const version = line.substring(colIndices[2], colIndices[3] || line.length).trim();
+          const current = line.substring(colIndices[2], colIndices[3]).trim();
+          const available = line.substring(colIndices[3]).trim().split(/\s+/)[0]; // Only take the first word (version)
           
           if (name) {
             const pkg = {
               name,
-              version,
+              version: current,
+              latest: available || current,
               manager: 'winget'
             };
             pkg.category = this.categorize(pkg);
@@ -175,6 +179,7 @@ class Scanner {
           const pkg = {
             name: parts[0],
             version: parts[1],
+            latest: parts[1],
             manager: 'scoop'
           };
           pkg.category = this.categorize(pkg);
@@ -205,6 +210,7 @@ class Scanner {
           const pkg = {
             name: parts[0],
             version: parts[1],
+            latest: parts[1],
             manager: 'choco'
           };
           pkg.category = this.categorize(pkg);
@@ -249,6 +255,7 @@ class Scanner {
           const pkg = {
             name: p.DisplayName,
             version: p.DisplayVersion || 'unknown',
+            latest: p.DisplayVersion || 'unknown',
             manager: 'system'
           };
           pkg.category = this.categorize(pkg);
