@@ -224,20 +224,20 @@ class Scanner {
 
     const psScript = `
       $paths = @(
-        "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
-        "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
-        "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*"
-      )
+        'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',
+        'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',
+        'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*'
+      );
       $results = foreach ($path in $paths) {
         Get-ItemProperty $path -ErrorAction SilentlyContinue | 
         Where-Object { $_.DisplayName -and !$_.SystemComponent -and !$_.ParentKeyName } |
         Select-Object DisplayName, DisplayVersion
-      }
+      };
       $results | ConvertTo-Json
-    `;
+    `.replace(/\n/g, '').trim();
 
     try {
-      const { stdout } = await execAsync(`powershell -NoProfile -Command "${psScript.replace(/\n/g, ' ').replace(/"/g, '\\"')}"`);
+      const { stdout } = await execAsync(`powershell -NoProfile -Command "${psScript.replace(/"/g, '\\"')}"`);
       if (!stdout || stdout.trim() === "") return { manager: 'system', available: true, packages: [] };
       
       const rawData = JSON.parse(stdout);
