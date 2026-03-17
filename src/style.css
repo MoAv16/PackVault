@@ -195,6 +195,30 @@ tr:hover { background-color: var(--row-hover); }
 .detail-label { font-weight: bold; color: var(--text-muted); display: inline-block; width: 100px; }
 .row-clickable { cursor: pointer; }
 
+body.dark-theme ::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+body.dark-theme ::-webkit-scrollbar-thumb {
+  background: #444;
+}
+body.dark-theme ::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Settings View */
+.settings-container {
+  display: none;
+  padding: 40px;
+  max-width: 800px;
+}
+.settings-container.active { display: block; }
+.settings-section { margin-bottom: 30px; }
+.settings-section h3 { margin-bottom: 15px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+.setting-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.setting-info { flex-grow: 1; }
+.setting-title { font-weight: bold; display: block; }
+.setting-desc { font-size: 0.85rem; color: var(--text-muted); }
+
 /* Responsive Adjustments */
 @media (max-width: 900px) {
   .sidebar { width: 200px; }

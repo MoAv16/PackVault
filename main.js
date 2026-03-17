@@ -23,12 +23,12 @@ function createWindow() {
 
 app.whenReady().then(() => {
   ipcMain.handle('dark-mode:toggle', () => {
-    if (nativeTheme.shouldUseDarkColors) {
-      nativeTheme.themeSource = 'light'
+    if (nativeTheme.themeSource === 'system') {
+      nativeTheme.themeSource = nativeTheme.shouldUseDarkColors ? 'light' : 'dark';
     } else {
-      nativeTheme.themeSource = 'dark'
+      nativeTheme.themeSource = (nativeTheme.themeSource === 'dark') ? 'light' : 'dark';
     }
-    return nativeTheme.shouldUseDarkColors
+    return nativeTheme.shouldUseDarkColors;
   });
 
   ipcMain.handle('dark-mode:system', () => {
@@ -84,6 +84,17 @@ app.whenReady().then(() => {
       }
     });
     return allPackages;
+  });
+
+  ipcMain.handle('system:clear-cache', () => {
+    const cacheDir = path.join(app.getPath('userData'), 'cache');
+    if (fs.existsSync(cacheDir)) {
+      const files = fs.readdirSync(cacheDir);
+      files.forEach(file => {
+        fs.unlinkSync(path.join(cacheDir, file));
+      });
+    }
+    return true;
   });
 
   ipcMain.handle('system:export-data', async (event, packages) => {

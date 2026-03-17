@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updatePackage: (manager, name) => ipcRenderer.invoke('system:update-package', { manager, name }),
   runAudit: (manager) => ipcRenderer.invoke('system:run-audit', manager),
   getCache: () => ipcRenderer.invoke('system:get-cache'),
+  clearCache: () => ipcRenderer.invoke('system:clear-cache'),
   exportData: (packages) => ipcRenderer.invoke('system:export-data', packages),
   toggleTheme: () => ipcRenderer.invoke('dark-mode:toggle'),
   systemTheme: () => ipcRenderer.invoke('dark-mode:system')

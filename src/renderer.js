@@ -10,16 +10,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('search-input');
   const navItems = document.querySelectorAll('nav li');
   const collectionBadge = document.getElementById('collection-badge');
-  const btnThemeToggle = document.getElementById('btn-theme-toggle');
+  const btnThemeToggle = document.getElementById('btn-theme-toggle-settings');
+  const btnClearCache = document.getElementById('btn-clear-cache');
+  
+  const mainTopbar = document.getElementById('main-topbar');
+  const mainTableContainer = document.getElementById('main-table-container');
+  const settingsView = document.getElementById('settings-view');
+  const appVersionText = document.getElementById('app-version-text');
+
+  // Load Version Info
+  appVersionText.textContent = `Electron: ${window.electronAPI.getAppVersion()}`;
 
   btnThemeToggle.addEventListener('click', async () => {
     const isDarkMode = await window.electronAPI.toggleTheme();
-    if (isDarkMode) {
+    updateThemeUI(isDarkMode);
+  });
+
+  btnClearCache.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to clear the local cache? You will need to scan your system again.')) {
+      await window.electronAPI.clearCache();
+      currentPackages = [];
+      renderTable();
+      alert('Cache cleared.');
+    }
+  });
+
+  function updateThemeUI(isDark) {
+    if (isDark) {
       document.body.classList.add('dark-theme');
     } else {
       document.body.classList.remove('dark-theme');
     }
-  });
+  }
 
   function updateSidebarBadge() {
     const count = selectedPackages.size;
@@ -32,6 +54,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderTable() {
+    if (currentFilter === 'settings') {
+      mainTopbar.style.display = 'none';
+      mainTableContainer.style.display = 'none';
+      settingsView.classList.add('active');
+      return;
+    } else {
+      mainTopbar.style.display = 'flex';
+      mainTableContainer.style.display = 'block';
+      settingsView.classList.remove('active');
+    }
+
     let filtered = currentPackages;
     
     if (currentFilter === 'collection') {
@@ -66,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>${p.name}</td>
           <td>${p.version}</td>
           <td class="${isOutdated ? 'outdated' : ''}">${p.latest || p.version}</td>
-          <td><span style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${p.manager}</span></td>
+          <td><span style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; color: #333;">${p.manager}</span></td>
           <td>
             <button class="btn primary btn-update" data-manager="${p.manager}" data-name="${p.name}" style="padding: 4px 8px; font-size: 0.8rem;">Update</button>
           </td>
@@ -103,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="detail-row"><span class="detail-label">Latest:</span> ${pkg.latest || pkg.version}</div>
         <div class="detail-row"><span class="detail-label">Category:</span> ${pkg.category}</div>
         <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
-        <div id="audit-results" style="font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; font-size: 0.8rem;"></div>
+        <div id="audit-results" style="font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; font-size: 0.8rem; color: #333;"></div>
       `;
       modal.classList.add('active');
     }
@@ -157,18 +190,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnScan.addEventListener('click', async () => {
     btnScan.disabled = true;
-    const originalText = currentFilter === 'all' ? 'Scan System' : `Scan ${currentFilter}`;
     btnScan.textContent = 'Scanning...';
     tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Scanning... This may take a few seconds.</td></tr>';
     
     try {
       const results = await window.electronAPI.scanAll(currentFilter);
       
-      // If we scanned a specific manager, only update that part of currentPackages
-      if (currentFilter !== 'all') {
+      if (currentFilter !== 'all' && currentFilter !== 'collection' && currentFilter !== 'settings') {
         const scannedManager = results[0]?.manager;
         if (scannedManager) {
-          // Remove old entries for this manager and add new ones
           currentPackages = currentPackages.filter(p => p.manager !== scannedManager);
           results.forEach(res => {
             if (res.available && res.packages) {
@@ -177,10 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
       } else {
-        // Full scan reset
         currentPackages = [];
         results.forEach(res => {
-          if (res.available && res.packages) {
+          if (res && res.available && res.packages) {
             currentPackages = currentPackages.concat(res.packages);
           }
         });
@@ -191,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tbody.innerHTML = `<tr><td colspan="6" class="empty-state" style="color: red;">Error: ${error.message}</td></tr>`;
     } finally {
       btnScan.disabled = false;
-      btnScan.textContent = 'Scan System'; // Reset to default or keep dynamic
+      btnScan.textContent = 'Scan System';
     }
   });
 

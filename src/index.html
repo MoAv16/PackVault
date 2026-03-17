@@ -23,18 +23,17 @@
           <li data-view="system_core">System Core (Drivers)</li>
           <li data-view="enterprise">Enterprise Apps</li>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-          <li data-view="settings">⚙️ Settings</li>
+          <li data-view="settings">Settings</li>
         </ul>
       </nav>
       <div class="actions">
         <button id="btn-scan-all" class="btn primary" style="margin-bottom: 10px;">Scan System</button>
         <button id="btn-export" class="btn" style="background-color: #e9ecef; color: #333;">Export Selection</button>
-        <button id="btn-theme-toggle" class="btn" style="background-color: transparent; border: 1px solid var(--border-color); color: var(--text-main); margin-top: 10px;">Toggle Dark Mode</button>
       </div>
     </aside>
     
     <main class="main-content">
-      <header class="topbar">
+      <header class="topbar" id="main-topbar">
         <div class="stats">
           <div class="stat-card">
             <span class="stat-label">Total Packages</span>
@@ -46,7 +45,7 @@
         </div>
       </header>
       
-      <div class="table-container">
+      <div class="table-container" id="main-table-container">
         <table id="packages-table">
           <thead>
             <tr>
@@ -60,10 +59,43 @@
           </thead>
           <tbody id="packages-body">
             <tr>
-              <td colspan="4" class="empty-state">No packages scanned yet. Click "Scan System".</td>
+              <td colspan="6" class="empty-state">No packages scanned yet. Click "Scan System".</td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="settings-container" id="settings-view">
+        <h2>Settings</h2>
+        <div class="settings-section">
+          <h3>Appearance</h3>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-title">Dark Mode</span>
+              <span class="setting-desc">Switch between light and dark themes.</span>
+            </div>
+            <button id="btn-theme-toggle-settings" class="btn" style="width: auto; padding: 8px 20px;">Toggle Theme</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>Data & Privacy</h3>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-title">Clear Local Cache</span>
+              <span class="setting-desc">Remove all stored package snapshots from your disk.</span>
+            </div>
+            <button id="btn-clear-cache" class="btn" style="width: auto; padding: 8px 20px; background-color: #dc3545; color: white;">Clear Cache</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <h3>About</h3>
+          <div class="setting-item">
+            <div class="setting-info">
+              <span class="setting-title">PackVault Version</span>
+              <span class="setting-desc" id="app-version-text">Loading...</span>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
