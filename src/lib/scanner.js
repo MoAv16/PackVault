@@ -388,6 +388,49 @@ class Scanner {
       packages: deduplicatedPackages
     }];
   }
+
+  /**
+   * Performs a deep analysis of all packages to find conflicts and redundancies.
+   */
+  analyzeHealth(packages) {
+    const issues = [];
+    const nameMap = new Map();
+
+    packages.forEach(pkg => {
+      const normalName = pkg.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!nameMap.has(normalName)) {
+        nameMap.set(normalName, []);
+      }
+      nameMap.get(normalName).push(pkg);
+    });
+
+    for (const [name, occurrences] of nameMap.entries()) {
+      // Rule 1: Redundant installations (Multiple Managers)
+      if (occurrences.length > 1) {
+        issues.push({
+          type: 'duplicate',
+          severity: 'medium',
+          title: `Redundant installation: ${occurrences[0].name}`,
+          description: `This software is installed via multiple sources: ${occurrences.map(o => o.manager).join(', ')}. This can cause PATH conflicts.`,
+          affected: occurrences
+        });
+      }
+
+      // Rule 2: Version Mismatch (for same software)
+      const versions = new Set(occurrences.map(o => o.version));
+      if (versions.size > 1 && occurrences.length > 1) {
+        issues.push({
+          type: 'version_mismatch',
+          severity: 'high',
+          title: `Version Mismatch: ${occurrences[0].name}`,
+          description: `Different versions are installed across managers. This often leads to unpredictable behavior.`,
+          affected: occurrences
+        });
+      }
+    }
+
+    return issues;
+  }
 }
 
 module.exports = new Scanner();
