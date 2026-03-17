@@ -105,17 +105,24 @@ nav li.active { color: var(--primary-color); font-weight: 500; border-right: 3px
   flex-grow: 1; 
   overflow-y: scroll; /* Force vertical scrollbar always visible or auto */
   overflow-x: auto;   /* Allow horizontal if needed */
-  padding: 20px; 
+  padding: 0; /* Remove padding to fix sticky header gap */
   background-color: var(--bg-color);
 }
 table { 
   width: 100%; 
-  min-width: 800px; /* Ensure columns have enough space */
-  border-collapse: collapse; 
+  min-width: 900px; /* Ensure columns have enough space */
+  border-collapse: separate; /* Required for sticky borders */
+  border-spacing: 0;
   background: var(--table-bg); 
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
-  border-radius: 6px; 
 }
+
+/* Specific Column Widths for Stability */
+th:nth-child(1), td:nth-child(1) { width: 50px; text-align: center; } /* Vault */
+th:nth-child(2), td:nth-child(2) { width: auto; } /* Name */
+th:nth-child(3), td:nth-child(3) { width: 120px; } /* Current */
+th:nth-child(4), td:nth-child(4) { width: 120px; } /* Latest */
+th:nth-child(5), td:nth-child(5) { width: 100px; } /* Manager */
+th:nth-child(6), td:nth-child(6) { width: 120px; } /* Actions */
 
 /* Custom Scrollbar for better visibility */
 ::-webkit-scrollbar {
@@ -133,7 +140,15 @@ table {
   background: #bbb;
 }
 th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
-th { background-color: var(--bg-color); font-weight: 600; color: var(--text-muted); position: sticky; top: 0; }
+th { 
+  background-color: var(--sidebar-bg); 
+  font-weight: 600; 
+  color: var(--text-muted); 
+  position: sticky; 
+  top: 0; 
+  z-index: 10;
+  border-bottom: 2px solid var(--border-color);
+}
 tr:hover { background-color: var(--row-hover); }
 .empty-state { text-align: center; color: var(--text-muted); padding: 40px; }
 .outdated { color: #d97706; font-weight: bold; }
