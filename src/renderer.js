@@ -10,6 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchInput = document.getElementById('search-input');
   const navItems = document.querySelectorAll('nav li');
   const collectionBadge = document.getElementById('collection-badge');
+  const btnThemeToggle = document.getElementById('btn-theme-toggle');
+
+  btnThemeToggle.addEventListener('click', async () => {
+    const isDarkMode = await window.electronAPI.toggleTheme();
+    if (isDarkMode) {
+      document.body.classList.add('dark-theme');
+    } else {
+      document.body.classList.remove('dark-theme');
+    }
+  });
 
   function updateSidebarBadge() {
     const count = selectedPackages.size;
