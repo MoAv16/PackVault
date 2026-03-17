@@ -17,26 +17,49 @@ class Scanner {
   }
 
   /**
+   * Assigns a logical category to a package based on its name and manager.
+   */
+  categorize(pkg) {
+    const name = pkg.name.toLowerCase();
+    const mgr = pkg.manager;
+
+    const runtimeKeywords = ['python', 'node.js', 'nodejs', 'java', 'openjdk', 'dotnet', 'rust', 'go-lang', 'ruby', 'perl', 'php'];
+    if (runtimeKeywords.some(k => name.includes(k))) return 'runtimes';
+
+    if (mgr === 'system') return 'desktop';
+    
+    if (mgr === 'npm' || mgr === 'pip') return 'packages';
+
+    if (mgr === 'scoop' || mgr === 'choco' || mgr === 'winget') {
+        const desktopKeywords = ['browser', 'client', 'desktop', 'player', 'office', 'studio', 'workstation', 'chrome', 'firefox', 'discord', 'spotify'];
+        if (desktopKeywords.some(k => name.includes(k))) return 'desktop';
+        return 'tools';
+    }
+
+    return 'tools';
+  }
+
+  /**
    * Scans global npm packages.
-   * Returns an array of package objects.
    */
   async scanNpm() {
     const isAvailable = await this.checkCommand('npm');
     if (!isAvailable) return { manager: 'npm', available: false, packages: [] };
 
     try {
-      // --depth=0 to only get top-level global packages
       const { stdout } = await execAsync('npm list -g --json --depth=0');
       const data = JSON.parse(stdout);
       
       const packages = [];
       if (data.dependencies) {
         for (const [name, info] of Object.entries(data.dependencies)) {
-          packages.push({
+          const pkg = {
             name,
             version: info.version || 'unknown',
             manager: 'npm'
-          });
+          };
+          pkg.category = this.categorize(pkg);
+          packages.push(pkg);
         }
       }
       
@@ -55,11 +78,15 @@ class Scanner {
       const { stdout } = await execAsync('pip list --format=json');
       const data = JSON.parse(stdout);
       
-      const packages = data.map(p => ({
-        name: p.name,
-        version: p.version,
-        manager: 'pip'
-      }));
+      const packages = data.map(p => {
+        const pkg = {
+          name: p.name,
+          version: p.version,
+          manager: 'pip'
+        };
+        pkg.category = this.categorize(pkg);
+        return pkg;
+      });
       
       return { manager: 'pip', available: true, packages };
     } catch (error) {
@@ -73,10 +100,8 @@ class Scanner {
     if (!isAvailable) return { manager: 'winget', available: false, packages: [] };
 
     try {
-      // Use chcp 65001 to ensure UTF-8 output, then run winget list
       const { stdout } = await execAsync('chcp 65001 >nul & winget list');
       
-      // Parse winget text output (Name, Id, Version, Available, Source)
       const lines = stdout.split(/\r?\n/);
       const packages = [];
       let startParsing = false;
@@ -88,7 +113,6 @@ class Scanner {
           continue;
         }
         if (!startParsing) {
-          // Find column headers to know where to split
           const lowerLine = line.toLowerCase();
           if (lowerLine.includes('name') && (lowerLine.includes('id')) && lowerLine.includes('version')) {
             colIndices = [
@@ -106,17 +130,18 @@ class Scanner {
 
         if (line.trim().length === 0) continue;
         
-        // Ensure we have columns to parse
         if (colIndices.length >= 3) {
           const name = line.substring(colIndices[0], colIndices[1]).trim();
           const version = line.substring(colIndices[2], colIndices[3] || line.length).trim();
           
           if (name) {
-            packages.push({
+            const pkg = {
               name,
               version,
               manager: 'winget'
-            });
+            };
+            pkg.category = this.categorize(pkg);
+            packages.push(pkg);
           }
         }
       }
@@ -133,7 +158,6 @@ class Scanner {
     if (!isAvailable) return { manager: 'scoop', available: false, packages: [] };
 
     try {
-      // scoop export returns a list of installed apps
       const { stdout } = await execAsync('scoop list');
       const lines = stdout.split('\n');
       const packages = [];
@@ -148,11 +172,13 @@ class Scanner {
 
         const parts = line.trim().split(/\s+/);
         if (parts.length >= 2) {
-          packages.push({
+          const pkg = {
             name: parts[0],
             version: parts[1],
             manager: 'scoop'
-          });
+          };
+          pkg.category = this.categorize(pkg);
+          packages.push(pkg);
         }
       }
       
@@ -176,11 +202,13 @@ class Scanner {
         if (line.trim().length === 0) continue;
         const parts = line.trim().split('|');
         if (parts.length >= 2) {
-          packages.push({
+          const pkg = {
             name: parts[0],
             version: parts[1],
             manager: 'choco'
-          });
+          };
+          pkg.category = this.categorize(pkg);
+          packages.push(pkg);
         }
       }
       
@@ -215,16 +243,18 @@ class Scanner {
       const rawData = JSON.parse(stdout);
       const data = Array.isArray(rawData) ? rawData : [rawData];
       
-      // Filter out empty names and map to our format
       const packages = data
         .filter(p => p.DisplayName)
-        .map(p => ({
-          name: p.DisplayName,
-          version: p.DisplayVersion || 'unknown',
-          manager: 'system'
-        }));
+        .map(p => {
+          const pkg = {
+            name: p.DisplayName,
+            version: p.DisplayVersion || 'unknown',
+            manager: 'system'
+          };
+          pkg.category = this.categorize(pkg);
+          return pkg;
+        });
       
-      // Remove duplicates by name
       const uniquePackages = Array.from(new Map(packages.map(item => [item.name, item])).values());
       
       return { manager: 'system', available: true, packages: uniquePackages };
