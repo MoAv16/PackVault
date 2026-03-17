@@ -9,6 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const statTotal = document.getElementById('stat-total');
   const searchInput = document.getElementById('search-input');
   const navItems = document.querySelectorAll('nav li');
+  const collectionBadge = document.getElementById('collection-badge');
+
+  function updateSidebarBadge() {
+    const count = selectedPackages.size;
+    collectionBadge.textContent = count;
+    if (count > 0) {
+      collectionBadge.classList.add('visible');
+    } else {
+      collectionBadge.classList.remove('visible');
+    }
+  }
 
   function renderTable() {
     let filtered = currentPackages;
@@ -36,9 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const isSelected = selectedPackages.has(p.name);
       
       return `
-        <tr>
+        <tr class="${isSelected ? 'row-selected' : ''}">
           <td class="checkbox-cell">
-            <input type="checkbox" class="select-pkg" data-name="${p.name}" ${isSelected ? 'checked' : ''}>
+            <span class="vault-toggle ${isSelected ? 'selected' : 'unselected'}" data-name="${p.name}">
+              ${isSelected ? '🔖' : '📑'}
+            </span>
           </td>
           <td>${p.name}</td>
           <td>${p.version}</td>
@@ -69,10 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Sidebar Filter Logic
   navItems.forEach(item => {
     item.addEventListener('click', (e) => {
-      const view = e.target.getAttribute('data-view');
+      const target = e.target.closest('li');
+      if (!target) return;
+      const view = target.getAttribute('data-view');
       if (!view) return;
       navItems.forEach(nav => nav.classList.remove('active'));
-      e.target.classList.add('active');
+      target.classList.add('active');
       currentFilter = view;
       renderTable();
     });
@@ -102,15 +117,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Selection Logic
-  tbody.addEventListener('change', (e) => {
-    if (e.target.classList.contains('select-pkg')) {
-      const name = e.target.getAttribute('data-name');
-      if (e.target.checked) {
-        selectedPackages.add(name);
-      } else {
+  // Vault Selection Logic (Icon Click)
+  tbody.addEventListener('click', (e) => {
+    const toggle = e.target.closest('.vault-toggle');
+    if (toggle) {
+      const name = toggle.getAttribute('data-name');
+      if (selectedPackages.has(name)) {
         selectedPackages.delete(name);
+      } else {
+        selectedPackages.add(name);
       }
+      updateSidebarBadge();
+      renderTable();
     }
   });
 
