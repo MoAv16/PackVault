@@ -19,6 +19,9 @@
           <li data-view="tools">CLI Tools</li>
           <li data-view="runtimes">Runtimes & Languages</li>
           <li data-view="packages">Manager Packages</li>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
+          <li data-view="system_core">System Core (Drivers)</li>
+          <li data-view="enterprise">Enterprise Apps</li>
         </ul>
       </nav>
       <div class="actions">
@@ -61,6 +64,23 @@
       </div>
     </main>
   </div>
+
+  <!-- Detail Modal -->
+  <div id="detail-modal" class="modal-overlay">
+    <div class="modal-content">
+      <header class="modal-header">
+        <h2 id="modal-title">Package Details</h2>
+        <button id="close-modal" class="btn-close">&times;</button>
+      </header>
+      <div class="modal-body" id="modal-body">
+        <!-- Content injected via JS -->
+      </div>
+      <footer class="modal-footer">
+        <button id="modal-btn-audit" class="btn">Run Security Check</button>
+      </footer>
+    </div>
+  </div>
+
   <script src="renderer.js"></script>
 </body>
 </html>

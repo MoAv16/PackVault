@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const isSelected = selectedPackages.has(p.name);
       
       return `
-        <tr class="${isSelected ? 'row-selected' : ''}">
+        <tr class="row-clickable ${isSelected ? 'row-selected' : ''}">
           <td class="checkbox-cell">
             <span class="vault-toggle ${isSelected ? 'selected' : 'unselected'}" data-name="${p.name}">
               ${isSelected ? '🔖' : '📑'}
@@ -64,6 +64,58 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
     }).join('');
   }
+
+  // Modal elements
+  const modal = document.getElementById('detail-modal');
+  const btnCloseModal = document.getElementById('close-modal');
+  const modalBody = document.getElementById('modal-body');
+  const modalTitle = document.getElementById('modal-title');
+  const modalBtnAudit = document.getElementById('modal-btn-audit');
+  let currentDetailPkg = null;
+
+  // Row click for details
+  tbody.addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('.vault-toggle') || e.target.classList.contains('vault-toggle')) return;
+    
+    const tr = e.target.closest('tr');
+    if (!tr) return;
+    
+    const name = tr.querySelector('.vault-toggle')?.getAttribute('data-name');
+    if (!name) return;
+    
+    const pkg = currentPackages.find(p => p.name === name);
+    if (pkg) {
+      currentDetailPkg = pkg;
+      modalTitle.textContent = pkg.name;
+      modalBody.innerHTML = `
+        <div class="detail-row"><span class="detail-label">Manager:</span> ${pkg.manager.toUpperCase()}</div>
+        <div class="detail-row"><span class="detail-label">Current:</span> ${pkg.version}</div>
+        <div class="detail-row"><span class="detail-label">Latest:</span> ${pkg.latest || pkg.version}</div>
+        <div class="detail-row"><span class="detail-label">Category:</span> ${pkg.category}</div>
+        <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
+        <div id="audit-results" style="font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 4px; display: none; white-space: pre-wrap; font-size: 0.8rem;"></div>
+      `;
+      modal.classList.add('active');
+    }
+  });
+
+  btnCloseModal.addEventListener('click', () => modal.classList.remove('active'));
+  
+  modalBtnAudit.addEventListener('click', async () => {
+    if (!currentDetailPkg) return;
+    const resDiv = document.getElementById('audit-results');
+    resDiv.style.display = 'block';
+    resDiv.textContent = 'Running security audit...';
+    modalBtnAudit.disabled = true;
+    try {
+        const result = await window.electronAPI.runAudit(currentDetailPkg.manager);
+        resDiv.textContent = JSON.stringify(result, null, 2);
+    } catch(e) {
+        resDiv.textContent = 'Audit failed: ' + e.message;
+    } finally {
+        modalBtnAudit.disabled = false;
+    }
+  });
 
   // Load cache on startup
   async function loadCache() {
