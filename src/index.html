@@ -11,23 +11,45 @@
     <aside class="sidebar">
       <div class="logo">PackVault</div>
       <nav>
-        <ul>
-          <li class="active" data-view="all">All Packages</li>
-          <li data-view="collection">My Collection (Vault) <span id="collection-badge" class="badge">0</span></li>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-          <li data-view="desktop">Desktop Programs</li>
-          <li data-view="tools">CLI Tools</li>
-          <li data-view="runtimes">Runtimes & Languages</li>
-          <li data-view="packages">Manager Packages</li>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-          <li data-view="system_core">System Core (Drivers)</li>
-          <li data-view="enterprise">Enterprise Apps</li>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
-          <li data-view="settings">Settings</li>
-        </ul>
+        <div class="nav-group">
+          <div class="nav-group-header">Vault</div>
+          <ul>
+            <li data-view="collection">My Collection <span id="collection-badge" class="badge">0</span></li>
+            <li data-view="export">Export Hub</li>
+          </ul>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-header">Packages</div>
+          <ul>
+            <li class="active" data-view="all">All Packages</li>
+            <li data-view="desktop">Desktop Programs</li>
+            <li data-view="tools">CLI Tools</li>
+            <li data-view="runtimes">Runtimes</li>
+            <li data-view="packages">Manager Packages</li>
+            <li data-view="system_core">System Core</li>
+            <li data-view="enterprise">Enterprise Apps</li>
+          </ul>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-header">PackageLab</div>
+          <ul>
+            <li data-view="blueprints">Setup Blueprints</li>
+            <li data-view="sandbox">Sandbox Creator</li>
+            <li data-view="health">System Health</li>
+          </ul>
+        </div>
+
+        <div class="nav-group" style="margin-top: auto;">
+          <ul>
+            <li data-view="settings">Settings</li>
+          </ul>
+        </div>
       </nav>
       <div class="actions">
         <button id="btn-scan-all" class="btn primary" style="margin-bottom: 10px;">Scan System</button>
+        <button id="btn-run-analyzer" class="btn" style="display: none; background-color: #6f42c1; color: white; margin-bottom: 10px;">Run Analyzer</button>
         <button id="btn-export" class="btn" style="background-color: #e9ecef; color: #333;">Export Selection</button>
       </div>
     </aside>
@@ -49,17 +71,16 @@
         <table id="packages-table">
           <thead>
             <tr>
-              <th style="width: 40px;">Vault</th>
+              <th style="width: 50px;">Vault</th>
               <th>Name</th>
-              <th>Current</th>
-              <th>Latest</th>
-              <th>Manager</th>
-              <th>Actions</th>
+              <th style="width: 150px;">Current</th>
+              <th style="width: 150px;">Latest</th>
+              <th style="width: 120px;">Manager</th>
             </tr>
           </thead>
           <tbody id="packages-body">
             <tr>
-              <td colspan="6" class="empty-state">No packages scanned yet. Click "Scan System".</td>
+              <td colspan="5" class="empty-state">No packages scanned yet. Click "Scan System".</td>
             </tr>
           </tbody>
         </table>
@@ -111,6 +132,7 @@
         <!-- Content injected via JS -->
       </div>
       <footer class="modal-footer">
+        <button id="modal-btn-update" class="btn primary">Update Package</button>
         <button id="modal-btn-audit" class="btn">Run Security Check</button>
       </footer>
     </div>
