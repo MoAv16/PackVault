@@ -13,6 +13,7 @@
       <nav>
         <ul>
           <li class="active" data-view="all">All Packages</li>
+          <li data-view="collection">My Collection (Vault)</li>
           <hr style="border: 0; border-top: 1px solid #eee; margin: 10px 0;">
           <li data-view="desktop">Desktop Programs</li>
           <li data-view="tools">CLI Tools</li>
@@ -22,7 +23,7 @@
       </nav>
       <div class="actions">
         <button id="btn-scan-all" class="btn primary" style="margin-bottom: 10px;">Scan System</button>
-        <button id="btn-export" class="btn" style="background-color: #e9ecef; color: #333;">Export Restore Script</button>
+        <button id="btn-export" class="btn" style="background-color: #e9ecef; color: #333;">Export Selection</button>
       </div>
     </aside>
     
@@ -43,8 +44,10 @@
         <table id="packages-table">
           <thead>
             <tr>
+              <th style="width: 40px;">Sel.</th>
               <th>Name</th>
-              <th>Version</th>
+              <th>Current</th>
+              <th>Latest</th>
               <th>Manager</th>
               <th>Actions</th>
             </tr>

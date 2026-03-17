@@ -57,3 +57,5 @@ th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--bo
 th { background-color: var(--bg-color); font-weight: 600; color: var(--text-muted); position: sticky; top: 0; }
 tr:hover { background-color: var(--bg-color); }
 .empty-state { text-align: center; color: var(--text-muted); padding: 40px; }
+.outdated { color: #d97706; font-weight: bold; }
+.checkbox-cell { text-align: center; }

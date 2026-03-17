@@ -1,4 +1,5 @@
 let currentPackages = [];
+let selectedPackages = new Set();
 let currentFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,7 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderTable() {
     let filtered = currentPackages;
     
-    if (currentFilter !== 'all') {
+    if (currentFilter === 'collection') {
+      filtered = currentPackages.filter(p => selectedPackages.has(p.name));
+    } else if (currentFilter !== 'all') {
       filtered = currentPackages.filter(p => p.category === currentFilter);
     }
     
@@ -22,22 +25,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No packages found.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-state">${currentFilter === 'collection' ? 'Collection is empty. Add packages from "All Packages".' : 'No packages found.'}</td></tr>`;
       statTotal.textContent = '0';
       return;
     }
 
     statTotal.textContent = filtered.length.toString();
-    tbody.innerHTML = filtered.map(p => `
-      <tr>
-        <td>${p.name}</td>
-        <td>${p.version}</td>
-        <td><span style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${p.manager}</span></td>
-        <td>
-          <button class="btn primary btn-update" data-manager="${p.manager}" data-name="${p.name}" style="padding: 4px 8px; font-size: 0.8rem;">Update</button>
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = filtered.map(p => {
+      const isOutdated = p.latest && p.latest !== p.version && p.latest !== 'unknown';
+      const isSelected = selectedPackages.has(p.name);
+      
+      return `
+        <tr>
+          <td class="checkbox-cell">
+            <input type="checkbox" class="select-pkg" data-name="${p.name}" ${isSelected ? 'checked' : ''}>
+          </td>
+          <td>${p.name}</td>
+          <td>${p.version}</td>
+          <td class="${isOutdated ? 'outdated' : ''}">${p.latest || p.version}</td>
+          <td><span style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${p.manager}</span></td>
+          <td>
+            <button class="btn primary btn-update" data-manager="${p.manager}" data-name="${p.name}" style="padding: 4px 8px; font-size: 0.8rem;">Update</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
 
   // Load cache on startup
@@ -57,9 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Sidebar Filter Logic
   navItems.forEach(item => {
     item.addEventListener('click', (e) => {
+      const view = e.target.getAttribute('data-view');
+      if (!view) return;
       navItems.forEach(nav => nav.classList.remove('active'));
       e.target.classList.add('active');
-      currentFilter = e.target.getAttribute('data-view');
+      currentFilter = view;
       renderTable();
     });
   });
@@ -67,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
   btnScan.addEventListener('click', async () => {
     btnScan.disabled = true;
     btnScan.textContent = 'Scanning...';
-    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Scanning system... This may take a few seconds.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Scanning system... This may take a few seconds.</td></tr>';
     
     try {
       const results = await window.electronAPI.scanAll();
@@ -81,17 +95,33 @@ document.addEventListener('DOMContentLoaded', () => {
       
       renderTable();
     } catch (error) {
-      tbody.innerHTML = `<tr><td colspan="4" class="empty-state" style="color: red;">Error: ${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" class="empty-state" style="color: red;">Error: ${error.message}</td></tr>`;
     } finally {
       btnScan.disabled = false;
       btnScan.textContent = 'Scan System';
     }
   });
 
+  // Selection Logic
+  tbody.addEventListener('change', (e) => {
+    if (e.target.classList.contains('select-pkg')) {
+      const name = e.target.getAttribute('data-name');
+      if (e.target.checked) {
+        selectedPackages.add(name);
+      } else {
+        selectedPackages.delete(name);
+      }
+    }
+  });
+
   // Export Logic
   btnExport.addEventListener('click', async () => {
-    if (currentPackages.length === 0) {
-      alert("No packages to export. Please scan first.");
+    const packagesToExport = currentFilter === 'collection' 
+      ? currentPackages.filter(p => selectedPackages.has(p.name))
+      : currentPackages;
+
+    if (packagesToExport.length === 0) {
+      alert("No packages to export. Selection is empty.");
       return;
     }
     
@@ -99,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnExport.textContent = 'Exporting...';
     
     try {
-      const result = await window.electronAPI.exportData(currentPackages);
+      const result = await window.electronAPI.exportData(packagesToExport);
       if (result.success) {
         alert('Script saved to: ' + result.filePath);
       } else if (!result.canceled) {
@@ -109,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Error: ' + e.message);
     } finally {
       btnExport.disabled = false;
-      btnExport.textContent = 'Export Restore Script';
+      btnExport.textContent = 'Export Selection';
     }
   });
 
@@ -131,11 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = await window.electronAPI.updatePackage(manager, name);
         if (result.success) {
           btn.textContent = 'Updated!';
-          btn.style.backgroundColor = '#198754'; // success green
+          btn.style.backgroundColor = '#198754';
         } else {
           alert('Update failed: ' + result.error);
           btn.textContent = 'Failed';
-          btn.style.backgroundColor = '#dc3545'; // danger red
+          btn.style.backgroundColor = '#dc3545';
         }
       } catch (error) {
         alert('Error: ' + error.message);
