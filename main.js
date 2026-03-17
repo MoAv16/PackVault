@@ -18,17 +18,17 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle('system:scan-npm', async () => {
-    // 1. Check cache first (optional early return, but we'll do a fresh scan for now to test)
-    // 2. Perform scan
-    const result = await scanner.scanNpm();
+  ipcMain.handle('system:scan-all', async () => {
+    const results = await scanner.scanAll();
     
-    // 3. Save to cache
-    if (result.available) {
-      cache.save('npm', result);
-    }
+    // Save available managers to cache
+    results.forEach(res => {
+      if (res.available && res.packages.length > 0) {
+        cache.save(res.manager, res);
+      }
+    });
     
-    return result;
+    return results;
   });
 
   createWindow();
