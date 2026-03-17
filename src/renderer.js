@@ -95,25 +95,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
   btnScan.addEventListener('click', async () => {
     btnScan.disabled = true;
+    const originalText = currentFilter === 'all' ? 'Scan System' : `Scan ${currentFilter}`;
     btnScan.textContent = 'Scanning...';
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Scanning system... This may take a few seconds.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Scanning... This may take a few seconds.</td></tr>';
     
     try {
-      const results = await window.electronAPI.scanAll();
+      const results = await window.electronAPI.scanAll(currentFilter);
       
-      currentPackages = [];
-      results.forEach(res => {
-        if (res.available && res.packages) {
-          currentPackages = currentPackages.concat(res.packages);
+      // If we scanned a specific manager, only update that part of currentPackages
+      if (currentFilter !== 'all') {
+        const scannedManager = results[0]?.manager;
+        if (scannedManager) {
+          // Remove old entries for this manager and add new ones
+          currentPackages = currentPackages.filter(p => p.manager !== scannedManager);
+          results.forEach(res => {
+            if (res.available && res.packages) {
+              currentPackages = currentPackages.concat(res.packages);
+            }
+          });
         }
-      });
+      } else {
+        // Full scan reset
+        currentPackages = [];
+        results.forEach(res => {
+          if (res.available && res.packages) {
+            currentPackages = currentPackages.concat(res.packages);
+          }
+        });
+      }
       
       renderTable();
     } catch (error) {
       tbody.innerHTML = `<tr><td colspan="6" class="empty-state" style="color: red;">Error: ${error.message}</td></tr>`;
     } finally {
       btnScan.disabled = false;
-      btnScan.textContent = 'Scan System';
+      btnScan.textContent = 'Scan System'; // Reset to default or keep dynamic
     }
   });
 

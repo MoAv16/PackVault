@@ -7,8 +7,10 @@ const updater = require('./src/lib/updater.js');
 
 function createWindow() {
   const win = new BrowserWindow({
-    width: 1000,
-    height: 700,
+    width: 1100,
+    height: 800,
+    minWidth: 900,
+    minHeight: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -20,12 +22,29 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  ipcMain.handle('system:scan-all', async () => {
-    const results = await scanner.scanAll();
+  ipcMain.handle('system:scan-all', async (event, target = 'all') => {
+    let results = [];
+    
+    if (target === 'all') {
+      results = await scanner.scanAll();
+    } else {
+      // Map view categories to specific scan functions
+      switch (target) {
+        case 'npm': results = [await scanner.scanNpm()]; break;
+        case 'pip': results = [await scanner.scanPip()]; break;
+        case 'winget': results = [await scanner.scanWinget()]; break;
+        case 'scoop': results = [await scanner.scanScoop()]; break;
+        case 'choco': results = [await scanner.scanChoco()]; break;
+        case 'system': results = [await scanner.scanSystemPrograms()]; break;
+        case 'desktop': results = [await scanner.scanSystemPrograms(), await scanner.scanWinget()]; break; // Mixed
+        case 'runtimes': results = await scanner.scanAll(); break; // Scan all but filter in renderer
+        default: results = await scanner.scanAll();
+      }
+    }
     
     // Save available managers to cache
     results.forEach(res => {
-      if (res.available && res.packages.length > 0) {
+      if (res && res.available && res.packages.length > 0) {
         cache.save(res.manager, res);
       }
     });
