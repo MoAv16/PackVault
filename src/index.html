@@ -1,18 +1,58 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>PackVault</title>
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-    <h1>PackVault</h1>
-    <div style="margin-bottom: 20px;">
-      <button id="btn-scan-npm">Scan NPM Packages</button>
-    </div>
-    <div id="output" style="background: #e0e0e0; padding: 10px; border-radius: 4px; font-family: monospace; white-space: pre-wrap; max-height: 400px; overflow-y: auto;">
-      Ready.
-    </div>
-    <script src="renderer.js"></script>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PackVault</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="logo">PackVault</div>
+      <nav>
+        <ul>
+          <li class="active" data-view="all">All Packages</li>
+          <li data-view="npm">NPM (Node)</li>
+        </ul>
+      </nav>
+      <div class="actions">
+        <button id="btn-scan-all" class="btn primary">Scan System</button>
+      </div>
+    </aside>
+    
+    <main class="main-content">
+      <header class="topbar">
+        <div class="stats">
+          <div class="stat-card">
+            <span class="stat-label">Total Packages</span>
+            <span class="stat-value" id="stat-total">0</span>
+          </div>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Search packages...">
+        </div>
+      </header>
+      
+      <div class="table-container">
+        <table id="packages-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Version</th>
+              <th>Manager</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="packages-body">
+            <tr>
+              <td colspan="4" class="empty-state">No packages scanned yet. Click "Scan System".</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+  <script src="renderer.js"></script>
+</body>
 </html>
