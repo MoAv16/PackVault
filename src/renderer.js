@@ -3,6 +3,7 @@ let currentFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
   const btnScan = document.getElementById('btn-scan-all');
+  const btnExport = document.getElementById('btn-export');
   const tbody = document.getElementById('packages-body');
   const statTotal = document.getElementById('stat-total');
   const searchInput = document.getElementById('search-input');
@@ -39,6 +40,20 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
+  // Load cache on startup
+  async function loadCache() {
+    try {
+      const cachedData = await window.electronAPI.getCache();
+      if (cachedData && cachedData.length > 0) {
+        currentPackages = cachedData;
+        renderTable();
+      }
+    } catch (e) {
+      console.error("Error loading cache", e);
+    }
+  }
+  loadCache();
+
   // Sidebar Filter Logic
   navItems.forEach(item => {
     item.addEventListener('click', (e) => {
@@ -70,6 +85,31 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       btnScan.disabled = false;
       btnScan.textContent = 'Scan System';
+    }
+  });
+
+  // Export Logic
+  btnExport.addEventListener('click', async () => {
+    if (currentPackages.length === 0) {
+      alert("No packages to export. Please scan first.");
+      return;
+    }
+    
+    btnExport.disabled = true;
+    btnExport.textContent = 'Exporting...';
+    
+    try {
+      const result = await window.electronAPI.exportData(currentPackages);
+      if (result.success) {
+        alert('Script saved to: ' + result.filePath);
+      } else if (!result.canceled) {
+        alert('Export failed: ' + result.error);
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      btnExport.disabled = false;
+      btnExport.textContent = 'Export Restore Script';
     }
   });
 
