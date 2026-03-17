@@ -191,13 +191,57 @@ class Scanner {
     }
   }
 
+  async scanSystemPrograms() {
+    if (process.platform !== 'win32') return { manager: 'system', available: false, packages: [] };
+
+    const psScript = `
+      $paths = @(
+        "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
+        "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",
+        "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*"
+      )
+      $results = foreach ($path in $paths) {
+        Get-ItemProperty $path -ErrorAction SilentlyContinue | 
+        Where-Object { $_.DisplayName -and !$_.SystemComponent -and !$_.ParentKeyName } |
+        Select-Object DisplayName, DisplayVersion
+      }
+      $results | ConvertTo-Json
+    `;
+
+    try {
+      const { stdout } = await execAsync(`powershell -NoProfile -Command "${psScript.replace(/\n/g, ' ').replace(/"/g, '\\"')}"`);
+      if (!stdout || stdout.trim() === "") return { manager: 'system', available: true, packages: [] };
+      
+      const rawData = JSON.parse(stdout);
+      const data = Array.isArray(rawData) ? rawData : [rawData];
+      
+      // Filter out empty names and map to our format
+      const packages = data
+        .filter(p => p.DisplayName)
+        .map(p => ({
+          name: p.DisplayName,
+          version: p.DisplayVersion || 'unknown',
+          manager: 'system'
+        }));
+      
+      // Remove duplicates by name
+      const uniquePackages = Array.from(new Map(packages.map(item => [item.name, item])).values());
+      
+      return { manager: 'system', available: true, packages: uniquePackages };
+    } catch (error) {
+      console.error('Error scanning system programs:', error);
+      return { manager: 'system', available: true, packages: [], error: error.message };
+    }
+  }
+
   async scanAll() {
     const results = await Promise.all([
       this.scanNpm(),
       this.scanPip(),
       this.scanWinget(),
       this.scanScoop(),
-      this.scanChoco()
+      this.scanChoco(),
+      this.scanSystemPrograms()
     ]);
     return results;
   }
