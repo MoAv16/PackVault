@@ -6,6 +6,24 @@
   --border-color: #dee2e6;
   --primary-color: #0d6efd;
   --primary-hover: #0b5ed7;
+  --table-bg: #ffffff;
+  --modal-bg: #ffffff;
+  --row-hover: var(--bg-color);
+  --row-selected: #fef3c7;
+}
+
+body.dark-theme {
+  --bg-color: #121212;
+  --sidebar-bg: #1e1e1e;
+  --text-main: #e0e0e0;
+  --text-muted: #a0a0a0;
+  --border-color: #333333;
+  --primary-color: #3b82f6;
+  --primary-hover: #60a5fa;
+  --table-bg: #1e1e1e;
+  --modal-bg: #1e1e1e;
+  --row-hover: #2a2a2a;
+  --row-selected: #3f3f20;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -94,7 +112,7 @@ table {
   width: 100%; 
   min-width: 800px; /* Ensure columns have enough space */
   border-collapse: collapse; 
-  background: white; 
+  background: var(--table-bg); 
   box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
   border-radius: 6px; 
 }
@@ -116,7 +134,7 @@ table {
 }
 th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
 th { background-color: var(--bg-color); font-weight: 600; color: var(--text-muted); position: sticky; top: 0; }
-tr:hover { background-color: var(--bg-color); }
+tr:hover { background-color: var(--row-hover); }
 .empty-state { text-align: center; color: var(--text-muted); padding: 40px; }
 .outdated { color: #d97706; font-weight: bold; }
 .checkbox-cell { text-align: center; }
@@ -134,7 +152,7 @@ tr:hover { background-color: var(--bg-color); }
 
 /* Row Highlight */
 .row-selected {
-  background-color: #fef3c7 !important; /* Dezent Gold/Gelb */
+  background-color: var(--row-selected) !important; /* Dezent Gold/Gelb */
 }
 
 /* Sidebar Badge */
@@ -161,7 +179,7 @@ tr:hover { background-color: var(--bg-color); }
 }
 .modal-overlay.active { display: flex; }
 .modal-content {
-  background: white;
+  background: var(--modal-bg);
   width: 500px;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
