@@ -56,6 +56,10 @@ app.whenReady().then(() => {
     return await updater.updatePackage(manager, name);
   });
 
+  ipcMain.handle('system:run-audit', async (event, manager) => {
+    return await scanner.runAudit(manager);
+  });
+
   ipcMain.handle('system:get-cache', () => {
     const managers = ['npm', 'winget', 'pip', 'scoop', 'choco', 'system'];
     let allPackages = [];
