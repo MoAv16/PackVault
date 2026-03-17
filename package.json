@@ -17,5 +17,8 @@
   "license": "MIT",
   "devDependencies": {
     "electron": "^30.0.0"
+  },
+  "dependencies": {
+    "sudo-prompt": "^9.2.1"
   }
 }
