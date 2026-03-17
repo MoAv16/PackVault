@@ -32,7 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${p.name}</td>
         <td>${p.version}</td>
         <td><span style="background: #e9ecef; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${p.manager}</span></td>
-        <td>-</td>
+        <td>
+          <button class="btn primary btn-update" data-manager="${p.manager}" data-name="${p.name}" style="padding: 4px 8px; font-size: 0.8rem;">Update</button>
+        </td>
       </tr>
     `).join('');
   }
@@ -73,5 +75,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   searchInput.addEventListener('input', () => {
     renderTable();
+  });
+
+  // Handle dynamic update buttons
+  tbody.addEventListener('click', async (e) => {
+    if (e.target.classList.contains('btn-update')) {
+      const btn = e.target;
+      const manager = btn.getAttribute('data-manager');
+      const name = btn.getAttribute('data-name');
+      
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+      
+      try {
+        const result = await window.electronAPI.updatePackage(manager, name);
+        if (result.success) {
+          btn.textContent = 'Updated!';
+          btn.style.backgroundColor = '#198754'; // success green
+        } else {
+          alert('Update failed: ' + result.error);
+          btn.textContent = 'Failed';
+          btn.style.backgroundColor = '#dc3545'; // danger red
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+        btn.textContent = 'Error';
+      }
+    }
   });
 });
