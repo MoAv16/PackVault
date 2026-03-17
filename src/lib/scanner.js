@@ -77,7 +77,7 @@ class Scanner {
       const { stdout } = await execAsync('chcp 65001 >nul & winget list');
       
       // Parse winget text output (Name, Id, Version, Available, Source)
-      const lines = stdout.split('\n');
+      const lines = stdout.split(/\r?\n/);
       const packages = [];
       let startParsing = false;
       let colIndices = [];
@@ -89,12 +89,16 @@ class Scanner {
         }
         if (!startParsing) {
           // Find column headers to know where to split
-          if (line.includes('Name') && line.includes('Id') && line.includes('Version')) {
+          const lowerLine = line.toLowerCase();
+          if (lowerLine.includes('name') && (lowerLine.includes('id')) && lowerLine.includes('version')) {
             colIndices = [
               0, 
-              line.indexOf('Id'), 
-              line.indexOf('Version'), 
-              line.indexOf('Available') !== -1 ? line.indexOf('Available') : line.indexOf('Source')
+              line.toUpperCase().indexOf('ID'), 
+              line.toLowerCase().indexOf('version'), 
+              line.toLowerCase().includes('available') ? line.toLowerCase().indexOf('available') : 
+              (line.toLowerCase().includes('verfügbar') ? line.toLowerCase().indexOf('verfügbar') : 
+              (line.toLowerCase().includes('source') ? line.toLowerCase().indexOf('source') : 
+              (line.toLowerCase().includes('quelle') ? line.toLowerCase().indexOf('quelle') : line.length)))
             ];
           }
           continue;
