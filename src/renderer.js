@@ -74,6 +74,21 @@ document.addEventListener('DOMContentLoaded', () => {
       settingsView.classList.remove('active');
     }
 
+    if (currentFilter === 'health') {
+        renderHealthReport();
+        return;
+    }
+
+    if (currentFilter === 'blueprints') {
+        renderBlueprints();
+        return;
+    }
+
+    if (currentFilter === 'sandbox') {
+        renderSandbox();
+        return;
+    }
+
     let filtered = currentPackages;
     
     if (currentFilter === 'collection') {
@@ -114,6 +129,86 @@ document.addEventListener('DOMContentLoaded', () => {
     }).join('');
   }
 
+  function renderHealthReport() {
+    mainTopbar.style.display = 'flex';
+    mainTableContainer.style.display = 'block';
+    statTotal.textContent = 'Analysis';
+    
+    // We need to trigger the health check
+    // Since scanner.analyzeHealth is in lib, we might need an IPC or just run it here if we have all data
+    // For simplicity, let's assume we implement a basic version here or use currentPackages
+    
+    // Simple logic to find duplicates for the report
+    const nameMap = new Map();
+    currentPackages.forEach(p => {
+        const n = p.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!nameMap.has(n)) nameMap.set(n, []);
+        nameMap.get(n).push(p);
+    });
+
+    const issues = [];
+    for (const [name, occurrences] of nameMap.entries()) {
+        if (occurrences.length > 1) {
+            issues.push({
+                title: `Duplicate: ${occurrences[0].name}`,
+                desc: `Installed via: ${occurrences.map(o => o.manager).join(', ')}`,
+                severity: 'medium'
+            });
+        }
+    }
+
+    if (issues.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No issues found. Your system looks clean!</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = issues.map(iss => `
+        <tr style="border-left: 4px solid ${iss.severity === 'high' ? '#dc3545' : '#ffc107'}">
+            <td class="checkbox-cell">⚠️</td>
+            <td colspan="2"><strong>${iss.title}</strong><br><small>${iss.desc}</small></td>
+            <td>${iss.severity.toUpperCase()}</td>
+            <td>-</td>
+        </tr>
+    `).join('');
+  }
+
+  function renderBlueprints() {
+    statTotal.textContent = 'Blueprints';
+    const blueprints = [
+        { id: 'web', name: 'Web Developer', apps: ['Node.js', 'Git', 'VS Code', 'Docker'] },
+        { id: 'data', name: 'Data Scientist', apps: ['Python', 'Jupyter', 'Anaconda', 'Pandas'] },
+        { id: 'gaming', name: 'Gaming', apps: ['Steam', 'Discord', 'NVIDIA Control Panel', 'DirectX'] }
+    ];
+
+    tbody.innerHTML = blueprints.map(bp => {
+        const missing = bp.apps.filter(app => !currentPackages.some(p => p.name.toLowerCase().includes(app.toLowerCase())));
+        return `
+            <tr>
+                <td class="checkbox-cell">🧪</td>
+                <td><strong>${bp.name} Stack</strong><br><small>Recommended: ${bp.apps.join(', ')}</small></td>
+                <td colspan="2">${missing.length > 0 ? `<span style="color: #dc3545">Missing: ${missing.join(', ')}</span>` : '<span style="color: #198754">Complete!</span>'}</td>
+                <td><button class="btn primary" style="padding: 5px 10px; font-size: 0.7rem;">Add Missing</button></td>
+            </tr>
+        `;
+    }).join('');
+  }
+
+  function renderSandbox() {
+    statTotal.textContent = 'Sandbox';
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="empty-state">
+                <h3>Sandbox Creator</h3>
+                <p>Selected Packages: ${selectedPackages.size}</p>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                    <button class="btn primary" style="width: auto;">Generate Dockerfile</button>
+                    <button class="btn primary" style="width: auto; background-color: #6f42c1;">Generate Windows Sandbox (.wsb)</button>
+                </div>
+            </td>
+        </tr>
+    `;
+  }
+
   // Modal elements
   const modal = document.getElementById('detail-modal');
   const btnCloseModal = document.getElementById('close-modal');
@@ -125,12 +220,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Row click for details
   tbody.addEventListener('click', (e) => {
-    if (e.target.closest('.vault-toggle')) return;
+    if (e.target.tagName === 'BUTTON' || e.target.closest('.vault-toggle')) return;
     
     const tr = e.target.closest('tr');
-    if (!tr) return;
+    if (!tr || tr.classList.contains('empty-state')) return;
     
     const name = tr.getAttribute('data-name');
+    if (!name) return;
+
     const pkg = currentPackages.find(p => p.name === name);
     if (pkg) {
       currentDetailPkg = pkg;
@@ -141,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="detail-row"><span class="detail-label">Latest:</span> ${pkg.latest || pkg.version}</div>
         <div class="detail-row"><span class="detail-label">Category:</span> ${pkg.category}</div>
         <hr style="margin: 15px 0; border:0; border-top:1px solid var(--border-color);">
-        <div id="audit-results" style="font-family: monospace; background: var(--bg-color); padding: 15px; border-radius: 6px; display: none; white-space: pre-wrap; font-size: 0.8rem; border: 1px solid var(--border-color);"></div>
+        <div id="audit-results" style="font-family: monospace; background: var(--bg-color); padding: 15px; border-radius: 6px; display: none; white-space: pre-wrap; font-size: 0.8rem; border: 1px solid var(--border-color); color: #333;"></div>
       `;
       modal.classList.add('active');
     }
@@ -224,14 +321,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const results = await window.electronAPI.scanAll(currentFilter);
       
       if (currentFilter !== 'all' && !['collection', 'settings', 'blueprints', 'sandbox', 'health'].includes(currentFilter)) {
-        // Find which manager results we got
         const scannedManager = results[0]?.manager;
         if (scannedManager && scannedManager !== 'consolidated') {
           currentPackages = currentPackages.filter(p => p.manager !== scannedManager);
         }
       }
       
-      // Update with new data (deduplicated results always return manager: 'consolidated')
       if (results[0]?.manager === 'consolidated') {
         currentPackages = results[0].packages;
       } else {
@@ -250,6 +345,15 @@ document.addEventListener('DOMContentLoaded', () => {
       btnScan.disabled = false;
       btnScan.textContent = 'Scan System';
     }
+  });
+
+  // Analyzer Button
+  btnRunAnalyzer.addEventListener('click', () => {
+      navItems.forEach(nav => nav.classList.remove('active'));
+      const healthLi = document.querySelector('li[data-view="health"]');
+      if (healthLi) healthLi.classList.add('active');
+      currentFilter = 'health';
+      renderTable();
   });
 
   // Vault Selection Logic
